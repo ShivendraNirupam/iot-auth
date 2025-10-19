@@ -110,12 +110,7 @@ gw_msg2_size: 77
   - `round_trip_ms: 2.234935760498047 ms`: Total authentication time.
   - `gw_enc_time_ms`, `dev_dec_time_ms`, `dev_enc_time_ms: 0.0 ms`: Encryption/decryption times (likely inaccurate due to low-resolution timing; see Improvements).
 
-### Screenshot
-![Authentication Output Screenshot](image.png)
-*Note: Replace `screenshot.png` with the actual file name of the screenshot you capture. To create the screenshot:*
-1. Run `python .\iot-auth.py` in your terminal.
-2. Use a screenshot tool (e.g., Snipping Tool on Windows, `Shift+Cmd+4` on macOS) to capture the output.
-3. Save the image as `screenshot.png` in the same directory as this README.
+
 
 ## Performance Metrics
 - **Round-Trip Latency**: ~2.23 ms (local test, highly efficient).
