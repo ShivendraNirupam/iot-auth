@@ -70,9 +70,9 @@ class Gateway(threading.Thread):
         print("[GW] Listening on {}:{}".format(HOST, self.port))
         conn, _ = s.accept()
         print("[GW] Connected")
-        start_time = time.time()
+        start_time = time.perf_counter()
         data = conn.recv(MSG_BUFFER)
-        t_recv_init = time.time()
+        t_recv_init = time.perf_counter()
         parts = unpack_msg(data)
         if len(parts) < 3:
             print("[GW] malformed init")
@@ -83,7 +83,7 @@ class Gateway(threading.Thread):
         print("[GW] INIT from", idD, "nonceD", nonceD.hex(), "ts", ts)
 
         # timestamp check
-        if abs(time.time() - ts) > TIMESTAMP_TTL:
+        if abs(time.perf_counter() - ts) > TIMESTAMP_TTL:
             print("[GW] timestamp outside TTL")
             conn.close(); return
 
@@ -96,9 +96,9 @@ class Gateway(threading.Thread):
 
         plaintext = b'GW_OK|' + GW_ID
         aad = nonceD
-        t_before_enc = time.time()
+        t_before_enc = time.perf_counter()
         ct = aesgcm.encrypt(nonceG, plaintext, aad)
-        t_after_enc = time.time()
+        t_after_enc = time.perf_counter()
         mac = hmac_sha256(K_mac, nonceG + GW_ID + nonceD)
 
         # record metrics
@@ -106,11 +106,11 @@ class Gateway(threading.Thread):
         msg1 = pack_msg([nonceG, ct, mac])
         self.metrics['gw_msg1_size'] = len(msg1)
         conn.send(msg1)
-        t_sent1 = time.time()
+        t_sent1 = time.perf_counter()
 
         # wait for device response
         resp = conn.recv(MSG_BUFFER)
-        t_recv2 = time.time()
+        t_recv2 = time.perf_counter()
         parts2 = unpack_msg(resp)
         if len(parts2) < 2:
             print("[GW] malformed response")
@@ -155,14 +155,14 @@ class Device(threading.Thread):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((HOST, self.port))
         nonceD = os.urandom(12)
-        ts = struct.pack('!I', int(time.time()))
+        ts = struct.pack('!I', int(time.perf_counter()))  # Note: This might need adjustment
         init = pack_msg([self.device_id, nonceD, ts])
         self.metrics['dev_msg1_size'] = len(init)
-        t_start = time.time()
+        t_start = time.perf_counter()
         s.send(init)
         # receive GW response
         data = s.recv(MSG_BUFFER)
-        t_recv = time.time()
+        t_recv = time.perf_counter()
         parts = unpack_msg(data)
         if len(parts) < 3:
             print("[DEV] malformed response")
@@ -176,10 +176,10 @@ class Device(threading.Thread):
         aad = nonceD
 
         # measure decrypt time
-        t_before_dec = time.time()
+        t_before_dec = time.perf_counter()
         try:
             pt = aesgcm.decrypt(nonceG, ct, aad)
-            t_after_dec = time.time()
+            t_after_dec = time.perf_counter()
             self.metrics['dev_dec_time_ms'] = (t_after_dec - t_before_dec) * 1000
             if not pt.startswith(b'GW_OK'):
                 print("[DEV] GW did not say OK")
@@ -191,15 +191,15 @@ class Device(threading.Thread):
                 s.close(); return
             # prepare final message
             pt2 = b'DEV_OK|' + self.device_id + b'|' + nonceG
-            t_bef_enc2 = time.time()
+            t_bef_enc2 = time.perf_counter()
             ct2 = aesgcm.encrypt(nonceG, pt2, aad)
-            t_aft_enc2 = time.time()
+            t_aft_enc2 = time.perf_counter()
             mac2 = hmac_sha256(K_mac, ct2)
             resp = pack_msg([ct2, mac2])
             self.metrics['dev_enc_time_ms'] = (t_aft_enc2 - t_bef_enc2) * 1000
             self.metrics['dev_msg2_size'] = len(resp)
             s.send(resp)
-            self.metrics['round_trip_ms'] = (time.time() - t_start) * 1000
+            self.metrics['round_trip_ms'] = (time.perf_counter() - t_start) * 1000
             print("[DEV] Mutual auth finished")
             # save capture for replay if requested
             if self.do_replay and self.replay_capture is not None:
