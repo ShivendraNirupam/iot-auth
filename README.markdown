@@ -131,6 +131,3 @@ gw_msg2_size: 77
 
 ## Contributing
 Feel free to fork this repository, submit issues, or propose enhancements. Contributions to improve scalability, security, or documentation are welcome.
-
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
